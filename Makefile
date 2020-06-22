@@ -91,6 +91,11 @@ ifeq ("$(TARGETOS)", "trusty")
 	TARGETGOARCH := $(HOSTARCH)
 endif
 
+ifeq ("$(TARGETOS)", "unikraft")
+        TARGETGOOS := $(HOSTOS)
+        TARGETGOARCH := $(HOSTARCH)
+endif
+
 .PHONY: all host target \
 	manager runtest fuzzer executor \
 	ci hub \
@@ -107,6 +112,7 @@ endif
 	arch_freebsd_amd64_target arch_freebsd_386_target \
 	arch_netbsd_amd64_target arch_windows_amd64_target \
 	arch_akaros_target arch_fuchsia_target \
+	arch_unikraft_amd64_target \
 	arch_test presubmit presubmit_parallel clean
 
 all: host target
@@ -128,9 +134,9 @@ ifneq ("$(NO_CROSS_COMPILER)", "")
 	$(info ************************************************************************************)
 else
 	mkdir -p ./bin/$(TARGETOS)_$(TARGETARCH)
-	$(CC) -o ./bin/$(TARGETOS)_$(TARGETARCH)/syz-executor$(EXE) executor/executor.cc \
+	g++ -o ./bin/$(TARGETOS)_$(TARGETARCH)/syz-executor$(EXE) executor/executor.cc executor/uk_syscall_impl.c \
 		$(ADDCFLAGS) $(CFLAGS) -DGOOS_$(TARGETOS)=1 -DGOARCH_$(TARGETARCH)=1 \
-		-DHOSTGOOS_$(HOSTOS)=1 -DGIT_REVISION=\"$(REV)\"
+		-DHOSTGOOS_$(HOSTOS)=1 -DGIT_REVISION=\"$(REV)\" -ldl
 endif
 endif
 
@@ -256,6 +262,9 @@ lint:
 arch_darwin_amd64_host:
 	env HOSTOS=darwin HOSTARCH=amd64 $(MAKE) host
 
+arch_unikraft_amd64_target:
+	env TARGETOS=unikraft TARGETARCH=amd64 $(MAKE) target
+
 arch_linux_amd64_host:
 	env HOSTOS=linux HOSTARCH=amd64 $(MAKE) host
 
@@ -335,6 +344,7 @@ presubmit_arch: descriptions
 	$(MAKE) arch_freebsd_amd64_host
 	$(MAKE) arch_netbsd_amd64_host
 	$(MAKE) arch_openbsd_amd64_host
+	$(MAKE) arch_unikraft_amd64_target
 	$(MAKE) arch_linux_amd64_target
 	$(MAKE) arch_linux_386_target
 	$(MAKE) arch_linux_arm64_target

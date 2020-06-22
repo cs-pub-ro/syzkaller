@@ -25,6 +25,7 @@ func main() {
 	}
 	executorFilenames := []string{
 		"common_linux.h",
+		"common_unikraft.h",
 		"common_akaros.h",
 		"common_bsd.h",
 		"common_fuchsia.h",

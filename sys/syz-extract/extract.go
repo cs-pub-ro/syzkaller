@@ -57,15 +57,16 @@ type Extractor interface {
 }
 
 var extractors = map[string]Extractor{
-	"akaros":  new(akaros),
-	"linux":   new(linux),
-	"freebsd": new(freebsd),
-	"netbsd":  new(netbsd),
-	"openbsd": new(openbsd),
-	"android": new(linux),
-	"fuchsia": new(fuchsia),
-	"windows": new(windows),
-	"trusty":  new(trusty),
+	"akaros":   new(akaros),
+	"linux":    new(linux),
+	"freebsd":  new(freebsd),
+	"netbsd":   new(netbsd),
+	"openbsd":  new(openbsd),
+	"android":  new(linux),
+	"fuchsia":  new(fuchsia),
+	"windows":  new(windows),
+	"trusty":   new(trusty),
+	"unikraft": new(unikraft),
 }
 
 func main() {

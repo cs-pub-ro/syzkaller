@@ -1,6 +1,6 @@
 // Copyright 2017 syzkaller project authors. All rights reserved.
 // Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
-
+#if !GOOS_unikraft
 #include <sys/utsname.h>
 
 static unsigned host_kernel_version();
@@ -220,3 +220,4 @@ static void dump_cpu_state(int cpufd, char* vm_mem)
 		}
 	}
 }
+#endif

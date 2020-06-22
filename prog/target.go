@@ -79,6 +79,7 @@ var targets = make(map[string]*Target)
 
 func RegisterTarget(target *Target, types []Type, initArch func(target *Target)) {
 	key := target.OS + "/" + target.Arch
+	fmt.Printf("target registered: %s\n", key)
 	if targets[key] != nil {
 		panic(fmt.Sprintf("duplicate target %v", key))
 	}
@@ -92,7 +93,9 @@ func GetTarget(OS, arch string) (*Target, error) {
 		OS = "linux"
 	}
 	key := OS + "/" + arch
+	fmt.Printf("GetTarget: %s\n", key)
 	target := targets[key]
+	fmt.Printf("target: %v", target)
 	if target == nil {
 		var supported []string
 		for _, t := range targets {

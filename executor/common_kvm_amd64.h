@@ -6,7 +6,7 @@
 // Implementation of syz_kvm_setup_cpu pseudo-syscall.
 // See Intel Software Developer’s Manual Volume 3: System Programming Guide
 // for details on what happens here.
-
+#if !GOOS_unikraft
 #include "kvm.S.h"
 #include "kvm.h"
 
@@ -810,3 +810,4 @@ static long syz_kvm_setup_cpu(volatile long a0, volatile long a1, volatile long 
 		return -1;
 	return 0;
 }
+#endif

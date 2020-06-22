@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/google/syzkaller/pkg/log"
 	"github.com/google/syzkaller/pkg/mgrconfig"
 	"github.com/google/syzkaller/pkg/osutil"
 	"github.com/google/syzkaller/pkg/report"
@@ -133,6 +134,7 @@ func (inst *Instance) Forward(port int) (string, error) {
 
 func (inst *Instance) Run(timeout time.Duration, stop <-chan bool, command string) (
 	outc <-chan []byte, errc <-chan error, err error) {
+	fmt.Printf("command in run: %s\n", command)
 	return inst.impl.Run(timeout, stop, command)
 }
 
@@ -141,7 +143,8 @@ func (inst *Instance) Diagnose() ([]byte, bool) {
 }
 
 func (inst *Instance) Close() {
-	inst.impl.Close()
+	// inst.impl.Close()
+	log.Logf(0, "DEBUG: Close")
 	os.RemoveAll(inst.workdir)
 }
 
@@ -174,8 +177,10 @@ func (inst *Instance) MonitorExecution(outc <-chan []byte, errc <-chan error,
 	ticker := time.NewTicker(tickerPeriod)
 	defer ticker.Stop()
 	for {
+		//log.Logf(0, "DEBUG: MonitorExecution: begin for")
 		select {
 		case err := <-errc:
+			//log.Logf(0, "DEBUG: MonitorExecution: care err")
 			switch err {
 			case nil:
 				// The program has exited without errors,
@@ -184,6 +189,7 @@ func (inst *Instance) MonitorExecution(outc <-chan []byte, errc <-chan error,
 				if mon.exit&ExitNormal == 0 {
 					crash = lostConnectionCrash
 				}
+				fmt.Printf("fail on nil branch\n")
 				return mon.extractError(crash)
 			case ErrTimeout:
 				if mon.exit&ExitTimeout == 0 {
@@ -197,9 +203,11 @@ func (inst *Instance) MonitorExecution(outc <-chan []byte, errc <-chan error,
 				if mon.exit&ExitError == 0 {
 					crash = lostConnectionCrash
 				}
+				fmt.Printf("fail on default\n")
 				return mon.extractError(crash)
 			}
 		case out, ok := <-outc:
+			// log.Logf(0, "DEBUG: MonitorExecution: case out, ok")
 			if !ok {
 				outc = nil
 				continue
@@ -245,6 +253,7 @@ func (inst *Instance) MonitorExecution(outc <-chan []byte, errc <-chan error,
 			// in 140-280s detection delay.
 			// So the current timeout is 5 mins (300s).
 			// We don't want it to be too long too because it will waste time on real hangs.
+			//log.Logf(0, "DEBUG: MonitorExecution: case ticker.C")
 			if time.Since(lastExecuteTime) < NoOutputTimeout {
 				break
 			}
@@ -263,6 +272,7 @@ func (inst *Instance) MonitorExecution(outc <-chan []byte, errc <-chan error,
 			}
 			return rep
 		case <-Shutdown:
+			//log.Logf(0, "DEBUG: MonitorExecution: case shutdown")
 			return nil
 		}
 	}

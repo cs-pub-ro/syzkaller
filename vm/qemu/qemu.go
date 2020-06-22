@@ -180,6 +180,16 @@ var archConfigs = map[string]*archConfig{
 		TargetDir: "/",
 		NicModel:  ",model=e1000",
 	},
+	"unikraft/amd64": {
+		Qemu:      "qemu-system-x86_64",
+		QemuArgs:  "-enable-kvm -cpu host,migratable=off",
+		TargetDir: "/",
+		NicModel:  ",model=e1000",
+		CmdLine: append(linuxCmdline,
+			"root=/dev/sda",
+			"console=ttyS0",
+		),
+	},
 }
 
 var linuxCmdline = []string{
@@ -491,7 +501,6 @@ func (inst *instance) Run(timeout time.Duration, stop <-chan bool, command strin
 		return nil, nil, err
 	}
 	inst.merger.Add("ssh", rpipe)
-
 	sshArgs := vmimpl.SSHArgs(inst.debug, inst.sshkey, inst.port)
 	args := strings.Split(command, " ")
 	if bin := filepath.Base(args[0]); inst.target.HostFuzzer &&

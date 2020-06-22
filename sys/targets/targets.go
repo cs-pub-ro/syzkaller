@@ -301,6 +301,17 @@ var List = map[string]map[string]*Target{
 			NeedSyscallDefine: dontNeedSyscallDefine,
 		},
 	},
+	"unikraft": {
+		"amd64": {
+			PtrSize:           8,
+			PageSize:          4 << 10,
+			CFlags:            []string{"-m64"},
+			Triple:            "x86_64-linux-gnu",
+			KernelArch:        "x86_64",
+			KernelHeaderArch:  "x86",
+			NeedSyscallDefine: dontNeedSyscallDefine,
+		},
+	},
 }
 
 var oses = map[string]osCommon{
@@ -367,6 +378,13 @@ var oses = map[string]osCommon{
 		SyscallNumbers:   true,
 		Int64SyscallArgs: true,
 		SyscallPrefix:    "__NR_",
+	},
+	"unikraft": {
+		BuildOS:                "linux",
+		SyscallNumbers:         false,
+		ExecutorUsesShmem:      true,
+		ExecutorUsesForkServer: true,
+		KernelObject:           "unikraft",
 	},
 }
 
@@ -495,7 +513,7 @@ func initTarget(target *Target, OS, arch string) {
 	if target.BuildOS == "" {
 		target.BuildOS = OS
 	}
-	if runtime.GOOS != target.BuildOS {
+	if (runtime.GOOS != target.BuildOS) && (target.OS != "unikraft") {
 		// Spoil native binaries if they are not usable, so that nobody tries to use them later.
 		target.CCompiler = fmt.Sprintf("cant-build-%v-on-%v", target.OS, runtime.GOOS)
 		target.CPP = target.CCompiler

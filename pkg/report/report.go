@@ -131,14 +131,15 @@ const (
 )
 
 var ctors = map[string]fn{
-	"akaros":  ctorAkaros,
-	"linux":   ctorLinux,
-	"gvisor":  ctorGvisor,
-	"freebsd": ctorFreebsd,
-	"netbsd":  ctorNetbsd,
-	"openbsd": ctorOpenbsd,
-	"fuchsia": ctorFuchsia,
-	"windows": ctorStub,
+	"akaros":   ctorAkaros,
+	"linux":    ctorLinux,
+	"gvisor":   ctorGvisor,
+	"freebsd":  ctorFreebsd,
+	"netbsd":   ctorNetbsd,
+	"openbsd":  ctorOpenbsd,
+	"fuchsia":  ctorFuchsia,
+	"windows":  ctorStub,
+	"unikraft": ctorUnikraft,
 }
 
 type config struct {

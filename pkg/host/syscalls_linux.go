@@ -22,6 +22,9 @@ import (
 )
 
 func isSupported(c *prog.Syscall, target *prog.Target, sandbox string) (bool, string) {
+	log.Logf(0, "before ret")
+	return true, ""
+	log.Logf(0, "not ok")
 	log.Logf(2, "checking support for %v", c.Name)
 	if strings.HasPrefix(c.CallName, "syz_") {
 		return isSupportedSyzkall(sandbox, c)
@@ -93,6 +96,7 @@ func parseKallsyms(kallsyms []byte, arch string) map[string]bool {
 }
 
 func isSupportedKallsyms(c *prog.Syscall) (bool, string) {
+	log.Logf(0, "isSupporteKallsyms is called")
 	name := c.CallName
 	if newname := kallsymsRenameMap[name]; newname != "" {
 		name = newname

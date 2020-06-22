@@ -1,0 +1,11 @@
+# Copyright 2018 syzkaller project authors. All rights reserved.
+# Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
+
+# include </home/bianca/Desktop/thesis/unikraft/unikraft-hackathon/scripts/my_unikraft_project/unikraft/lib/ukdebug/include/uk/hexdump.h>
+# include </home/bianca/Work/gopath/src/github.com/google/syzkaller/sys/unikraft/tmp.h>
+include <uk/hexdump.h>
+
+resource res[int64]
+uk_hexdumpsn(str buffer[out], size int64, data buffer[in], lenn int64, addr0 int64, flags flags[uk_debug_flags], grps_per_line int64, line_prefix buffer[in]) res
+
+uk_debug_flags = UK_HXDF_ADDR, UK_HXDF_ASCIISEC, UK_HXDF_GRPBYTE, UK_HXDF_GRPWORD, UK_HXDF_GRPDWORD, UK_HXDF_GRPQWORD, UK_HXDF_COMPRESS

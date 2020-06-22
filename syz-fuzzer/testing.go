@@ -144,9 +144,9 @@ func checkMachine(args *checkArgs) (*rpctype.CheckArgs, error) {
 		args.ipcConfig.Flags&ipc.FlagSandboxAndroid != 0 {
 		return nil, fmt.Errorf("sandbox=android is not supported (%v)", feat.Reason)
 	}
-	if err := checkSimpleProgram(args, features); err != nil {
-		return nil, err
-	}
+	//if err := checkSimpleProgram(args, features); err != nil {
+	//	return nil, err
+	//}
 	return checkCalls(args, features)
 }
 
@@ -309,7 +309,7 @@ func buildCallList(target *prog.Target, enabledCalls []int, sandbox string) (
 		enabled = append(enabled, c.ID)
 	}
 	if len(calls) == 0 {
-		return enabled, disabled, fmt.Errorf("all system calls are disabled")
+		return enabled, disabled, fmt.Errorf("all system calls are disabled, enabledcalls: %v", enabledCalls)
 	}
 	return enabled, disabled, nil
 }

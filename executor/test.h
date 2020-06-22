@@ -201,7 +201,7 @@ static struct {
     {"test_copyin", test_copyin},
     {"test_csum_inet", test_csum_inet},
     {"test_csum_inet_acc", test_csum_inet_acc},
-#if GOOS_linux && GOARCH_amd64
+#if (GOOS_linux) && GOARCH_amd64
     {"test_kvm", test_kvm},
 #endif
 };

@@ -4,7 +4,7 @@
 // This file is shared between executor and csource package.
 
 // Generic parts of implementation of syz_usb_* pseudo-syscalls.
-
+#if !GOOS_unikraft
 #define USB_MAX_IFACE_NUM 4
 #define USB_MAX_EP_NUM 32
 #define USB_MAX_FDS 6
@@ -820,3 +820,4 @@ static bool lookup_control_response(const struct vusb_descriptors* descs, const 
 }
 
 #endif // SYZ_EXECUTOR || __NR_syz_usb_control_io
+#endif

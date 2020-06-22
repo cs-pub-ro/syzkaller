@@ -203,7 +203,7 @@ func (serv *RPCServer) Check(a *rpctype.CheckArgs, r *int) error {
 	serv.mgr.machineChecked(a, serv.targetEnabledSyscalls)
 	a.DisabledCalls = nil
 	serv.checkResult = a
-	serv.rotator = prog.MakeRotator(serv.target, serv.targetEnabledSyscalls, serv.rnd)
+	//serv.rotator = prog.MakeRotator(serv.target, serv.targetEnabledSyscalls, serv.rnd)
 	return nil
 }
 

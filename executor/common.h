@@ -29,7 +29,7 @@
 #include <errno.h>
 #endif
 
-#if SYZ_EXECUTOR && !GOOS_linux
+#if SYZ_EXECUTOR && !GOOS_linux && !GOOS_unikraft
 #include <unistd.h>
 NORETURN void doexit(int status)
 {
@@ -52,7 +52,7 @@ static unsigned long long procid;
 #include <signal.h>
 #include <string.h>
 
-#if GOOS_linux
+#if GOOS_linux || GOOS_unikraft
 #include <sys/syscall.h>
 #endif
 
@@ -95,7 +95,7 @@ static void segv_handler(int sig, siginfo_t* info, void* ctx)
 static void install_segv_handler(void)
 {
 	struct sigaction sa;
-#if GOOS_linux
+#if GOOS_linux || GOOS_unikraft
 	// Don't need that SIGCANCEL/SIGSETXID glibc stuff.
 	// SIGCANCEL sent to main thread causes it to exit
 	// without bringing down the whole group.
@@ -122,7 +122,7 @@ static void install_segv_handler(void)
 #endif
 #endif
 
-#if !GOOS_linux
+#if !GOOS_linux && !GOOS_unikraft
 #if (SYZ_EXECUTOR || SYZ_REPEAT) && SYZ_EXECUTOR_USES_FORK_SERVER
 #include <signal.h>
 #include <sys/types.h>
@@ -221,7 +221,7 @@ static void remove_dir(const char* dir)
 #endif
 #endif
 
-#if !GOOS_linux
+#if !GOOS_linux && !GOOS_unikraft
 #if SYZ_EXECUTOR
 static int inject_fault(int nth)
 {
@@ -392,6 +392,8 @@ static uint16 csum_inet_digest(struct csum_inet* csum)
 #include "common_fuchsia.h"
 #elif GOOS_linux
 #include "common_linux.h"
+#elif GOOS_unikraft
+#include "common_unikraft.h"
 #elif GOOS_test
 #include "common_test.h"
 #elif GOOS_windows
@@ -400,7 +402,7 @@ static uint16 csum_inet_digest(struct csum_inet* csum)
 #error "unknown OS"
 #endif
 
-#if SYZ_EXECUTOR || __NR_syz_execute_func
+#if (SYZ_EXECUTOR || __NR_syz_execute_func) && !GOOS_unikraft
 // syz_execute_func(text ptr[in, text[taget]])
 static long syz_execute_func(volatile long text)
 {
@@ -507,7 +509,7 @@ static void execute_one(void);
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#if GOOS_linux
+#if GOOS_linux || GOOS_unikraft
 #define WAIT_FLAGS __WALL
 #else
 #define WAIT_FLAGS 0

@@ -314,7 +314,15 @@ func (mgr *Manager) vmLoop() {
 	reproDone := make(chan *ReproResult, 1)
 	stopPending := false
 	shutdown := vm.Shutdown
+	started := false //by us
 	for shutdown != nil || len(instances) != vmCount {
+		//for len(instances) != vmCount {
+		log.Logf(0, "num_instances: %v", len(instances))
+		log.Logf(0, "reproInstances: %v", reproInstances)
+		log.Logf(0, "shutdown: %v", shutdown)
+		if started == true {
+			time.Sleep(100000 * time.Second)
+		}
 		mgr.mu.Lock()
 		phase := mgr.phase
 		mgr.mu.Unlock()
@@ -370,6 +378,7 @@ func (mgr *Manager) vmLoop() {
 				idx := instances[last]
 				instances = instances[:last]
 				log.Logf(1, "loop: starting instance %v", idx)
+				started = true
 				go func() {
 					crash, err := mgr.runInstance(idx)
 					runDone <- &RunResult{idx, crash, err}
@@ -383,6 +392,7 @@ func (mgr *Manager) vmLoop() {
 		}
 
 	wait:
+		log.Logf(0, "DEBUG: wait begin")
 		select {
 		case idx := <-bootInstance:
 			instances = append(instances, idx)
@@ -446,7 +456,10 @@ func (mgr *Manager) vmLoop() {
 			reply <- repros
 			goto wait
 		}
+		log.Logf(0, "DEBUG: wait end")
 	}
+	fmt.Printf("sleep")
+	time.Sleep(1000000 * time.Second)
 }
 
 func (mgr *Manager) loadCorpus() {
@@ -532,6 +545,8 @@ func checkProgram(target *prog.Target, enabled map[*prog.Syscall]bool, data []by
 }
 
 func (mgr *Manager) runInstance(index int) (*Crash, error) {
+	log.Logf(0, "DEBUG: running instance %v", index)
+	//fmt.Printf("running instance in manager")
 	mgr.checkUsedFiles()
 	inst, err := mgr.vmPool.Create(index)
 	if err != nil {
@@ -548,6 +563,7 @@ func (mgr *Manager) runInstance(index int) (*Crash, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to copy binary: %v", err)
 	}
+	log.Logf(0, "DEBUG: copying syz-fuzzer binary")
 
 	// If SyzExecutorCmd is provided, it means that syz-executor is already in
 	// the image, so no need to copy it.
@@ -557,6 +573,7 @@ func (mgr *Manager) runInstance(index int) (*Crash, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to copy binary: %v", err)
 		}
+		log.Logf(0, "DEBUG: copying syz-executor binary")
 	}
 
 	fuzzerV := 0
@@ -573,22 +590,28 @@ func (mgr *Manager) runInstance(index int) (*Crash, error) {
 	cmd := instance.FuzzerCmd(fuzzerBin, executorCmd, fmt.Sprintf("vm-%v", index),
 		mgr.cfg.TargetOS, mgr.cfg.TargetArch, fwdAddr, mgr.cfg.Sandbox, procs, fuzzerV,
 		mgr.cfg.Cover, *flagDebug, false, false)
+	//fmt.Printf("in MANAGER: cmd - %s\n", cmd)
+	fmt.Printf("mgr.cfg.TargteOS=%s\n", mgr.cfg.TargetOS)
 	outc, errc, err := inst.Run(time.Hour, mgr.vmStop, cmd)
 	if err != nil {
 		return nil, fmt.Errorf("failed to run fuzzer: %v", err)
 	}
 
+	log.Logf(0, "DEBUG: inst.Run done")
 	rep := inst.MonitorExecution(outc, errc, mgr.reporter, vm.ExitTimeout)
+	log.Logf(0, "DEBUG: inst.MonitorExecution ret: %v", rep)
 	if rep == nil {
 		// This is the only "OK" outcome.
 		log.Logf(0, "vm-%v: running for %v, restarting", index, time.Since(start))
 		return nil, nil
 	}
+	log.Logf(0, "DEBUG: inst.MonitorExecution done")
 	crash := &Crash{
 		vmIndex: index,
 		hub:     false,
 		Report:  rep,
 	}
+	log.Logf(0, "DEBUG: crash returned")
 	return crash, nil
 }
 
@@ -1027,16 +1050,19 @@ func (mgr *Manager) machineChecked(a *rpctype.CheckArgs, enabledSyscalls map[*pr
 		}
 	}
 	if a.Error != "" {
-		log.Fatalf("machine check: %v", a.Error)
+		//time.Sleep(100000 * time.Second)
+		//log.Fatalf("machine check: %v", a.Error)
+		log.Logf(0, "machine check: %v", a.Error)
 	}
 	log.Logf(0, "machine check:")
+	log.Logf(0, "enabledSyscalls: %v, mgr.target.Syscalls: %v", enabledSyscalls, mgr.target.Syscalls)
 	log.Logf(0, "%-24v: %v/%v", "syscalls", len(enabledSyscalls), len(mgr.target.Syscalls))
 	for _, feat := range a.Features.Supported() {
 		log.Logf(0, "%-24v: %v", feat.Name, feat.Reason)
 	}
 	mgr.checkResult = a
 	mgr.targetEnabledSyscalls = enabledSyscalls
-	mgr.loadCorpus()
+	//mgr.loadCorpus()
 	mgr.firstConnect = time.Now()
 }
 

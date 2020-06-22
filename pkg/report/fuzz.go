@@ -33,7 +33,7 @@ func Fuzz(data []byte) int {
 			panic(fmt.Sprintf("%v: len(Output) == 0", typ))
 		}
 		switch os {
-		case "openbsd", "netbsd", "fuchsia":
+		case "openbsd", "netbsd", "fuchsia", "unikraft":
 			// openbsd/netbsd has Start/End/SkipPos set incorrectly due to messing with /r/n.
 			// fuchsia because it symbolizes before parsing.
 			continue
@@ -71,6 +71,7 @@ var fuzzReporters = func() map[string]Reporter {
 		if os == "windows" {
 			continue
 		}
+
 		cfg := &mgrconfig.Config{
 			TargetOS:   os,
 			TargetArch: "amd64",

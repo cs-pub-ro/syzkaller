@@ -107,8 +107,9 @@ func main() {
 	debug.SetGCPercent(50)
 
 	var (
-		flagName    = flag.String("name", "test", "unique name for manager")
-		flagOS      = flag.String("os", runtime.GOOS, "target OS")
+		flagName = flag.String("name", "test", "unique name for manager")
+		//flagOS      = flag.String("os", runtime.GOOS, "target OS")
+		flagOS      = flag.String("os", "unikraft", "target OS")
 		flagArch    = flag.String("arch", runtime.GOARCH, "target arch")
 		flagManager = flag.String("manager", "", "manager rpc address")
 		flagProcs   = flag.Int("procs", 1, "number of parallel test processes")
@@ -121,6 +122,7 @@ func main() {
 	outputType := parseOutputType(*flagOutput)
 	log.Logf(0, "fuzzer started")
 
+	fmt.Printf("runtimeGOOS:%s, arch:%s\n", runtime.GOOS, runtime.GOARCH)
 	target, err := prog.GetTarget(*flagOS, *flagArch)
 	if err != nil {
 		log.Fatalf("%v", err)

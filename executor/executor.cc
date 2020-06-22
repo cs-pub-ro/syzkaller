@@ -1,6 +1,8 @@
 // Copyright 2017 syzkaller project authors. All rights reserved.
 // Use of this source code is governed by Apache 2 LICENSE that can be found in the LICENSE file.
-
+#ifdef GOOS_unikraft
+#include "unikraft_stubs.h"
+#endif
 // +build
 
 #include <algorithm>
@@ -310,6 +312,8 @@ static void setup_features(char** enable, int n);
 
 #if GOOS_linux
 #include "executor_linux.h"
+#elif GOOS_unikraft
+#include "executor_unikraft.h"
 #elif GOOS_fuchsia
 #include "executor_fuchsia.h"
 #elif GOOS_akaros
@@ -1368,7 +1372,7 @@ bool kcov_comparison_t::ignore() const
 			return true;
 		if (arg2 >= out_start && arg2 <= out_end)
 			return true;
-#if defined(GOOS_linux)
+#if defined(GOOS_linux) || defined(GOOS_unikraft)
 		// Filter out kernel physical memory addresses.
 		// These are internal kernel comparisons and should not be interesting.
 		// The range covers first 1TB of physical mapping.
