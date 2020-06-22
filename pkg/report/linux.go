@@ -26,7 +26,7 @@ type linux struct {
 	taskContext           *regexp.Regexp
 	cpuContext            *regexp.Regexp
 	questionableFrame     *regexp.Regexp
-	guiltyFileBlacklist   []*regexp.Regexp
+	guiltyFileIgnores     []*regexp.Regexp
 	reportStartIgnores    []*regexp.Regexp
 	infoMessagesWithStack [][]byte
 	eoi                   []byte
@@ -38,7 +38,8 @@ func ctorLinux(cfg *config) (Reporter, []string, error) {
 	if cfg.kernelObj != "" {
 		vmlinux = filepath.Join(cfg.kernelObj, cfg.target.KernelObject)
 		var err error
-		symbols, err = symbolizer.ReadTextSymbols(vmlinux)
+		symb := symbolizer.NewSymbolizer(cfg.target)
+		symbols, err = symb.ReadTextSymbols(vmlinux)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -48,12 +49,13 @@ func ctorLinux(cfg *config) (Reporter, []string, error) {
 		vmlinux: vmlinux,
 		symbols: symbols,
 	}
+	// nolint: lll
 	ctx.consoleOutputRe = regexp.MustCompile(`^(?:\*\* [0-9]+ printk messages dropped \*\* )?(?:.* login: )?(?:\<[0-9]+\>)?\[ *[0-9]+\.[0-9]+\](\[ *(?:C|T)[0-9]+\])? `)
 	ctx.taskContext = regexp.MustCompile(`\[ *T[0-9]+\]`)
 	ctx.cpuContext = regexp.MustCompile(`\[ *C[0-9]+\]`)
 	ctx.questionableFrame = regexp.MustCompile(`(\[\<[0-9a-f]+\>\])? \? `)
 	ctx.eoi = []byte("<EOI>")
-	ctx.guiltyFileBlacklist = []*regexp.Regexp{
+	ctx.guiltyFileIgnores = []*regexp.Regexp{
 		regexp.MustCompile(`.*\.h`),
 		regexp.MustCompile(`^lib/.*`),
 		regexp.MustCompile(`^virt/lib/.*`),
@@ -162,13 +164,23 @@ func (ctx *linux) Parse(output []byte) *Report {
 			rep.Corrupted, rep.CorruptedReason = ctx.isCorrupted(title, report, format)
 		}
 		if rep.CorruptedReason == corruptedNoFrames && context != contextConsole && !questionable {
+			// We used to look at questionable frame with the following incentive:
+			// """
 			// Some crash reports have all frames questionable.
 			// So if we get a corrupted report because there are no frames,
 			// try again now looking at questionable frames.
 			// Only do this if we have a real context (CONFIG_PRINTK_CALLER=y),
 			// to be on the safer side. Without context it's too easy to use
 			// a stray frame from a wrong context.
-			continue
+			// """
+			// Most likely reports without proper stack traces were caused by a bug
+			// in the unwinder and are now fixed in 187b96db5ca7 "x86/unwind/orc:
+			// Fix unwind_get_return_address_ptr() for inactive tasks".
+			// Disable trying to use questionable frames for now.
+			useQuestionableFrames := false
+			if useQuestionableFrames {
+				continue
+			}
 		}
 		return rep
 	}
@@ -345,7 +357,7 @@ func (ctx *linux) Symbolize(rep *Report) error {
 }
 
 func (ctx *linux) symbolize(rep *Report) error {
-	symb := symbolizer.NewSymbolizer()
+	symb := symbolizer.NewSymbolizer(ctx.config.target)
 	defer symb.Close()
 	var symbolized []byte
 	s := bufio.NewScanner(bytes.NewReader(rep.Report))
@@ -422,7 +434,7 @@ func (ctx *linux) extractGuiltyFile(rep *Report) string {
 	if strings.HasPrefix(rep.Title, "INFO: rcu detected stall") {
 		// Special case for rcu stalls.
 		// There are too many frames that we want to skip before actual guilty frames,
-		// we would need to blacklist too many files and that would be fragile.
+		// we would need to ignore too many files and that would be fragile.
 		// So instead we try to extract guilty file starting from the known
 		// interrupt entry point first.
 		if pos := bytes.Index(report, []byte(" apic_timer_interrupt+0x")); pos != -1 {
@@ -438,7 +450,7 @@ func (ctx *linux) extractGuiltyFileImpl(report []byte) string {
 	files := ctx.extractFiles(report)
 nextFile:
 	for _, file := range files {
-		for _, re := range ctx.guiltyFileBlacklist {
+		for _, re := range ctx.guiltyFileIgnores {
 			if re.MatchString(file) {
 				continue nextFile
 			}
@@ -551,7 +563,7 @@ func (ctx *linux) isCorrupted(title string, report []byte, format oopsFormat) (b
 				}
 			}
 			if bytes.Contains(frames[i], []byte("(stack is not available)")) ||
-				stackFrameRe.Match(frames[i]) {
+				linuxStackFrameRe.Match(frames[i]) {
 				corrupted = false
 				break
 			}
@@ -705,10 +717,11 @@ var linuxStallAnchorFrames = []*regexp.Regexp{
 	compile("exit_to_usermode"),
 }
 
+// nolint: lll
 var (
-	linuxSymbolizeRe = regexp.MustCompile(`(?:\[\<(?:[0-9a-f]+)\>\])?[ \t]+(?:[0-9]+:)?([a-zA-Z0-9_.]+)\+0x([0-9a-f]+)/0x([0-9a-f]+)`)
-	stackFrameRe     = regexp.MustCompile(`^ *(?:\[\<?(?:[0-9a-f]+)\>?\] ?){0,2}[ \t]+(?:[0-9]+:)?([a-zA-Z0-9_.]+)\+0x([0-9a-f]+)/0x([0-9a-f]+)`)
-	linuxRipFrame    = compile(`N?IP:? (?:(?:[0-9]+:)?(?:{{PC}} +){0,2}{{FUNC}}|[0-9]+:0x[0-9a-f]+|(?:[0-9]+:)?{{PC}} +\[< *\(null\)>\] +\(null\)|[0-9]+: +\(null\))`)
+	linuxSymbolizeRe  = regexp.MustCompile(`(?:\[\<(?:[0-9a-f]+)\>\])?[ \t]+(?:[0-9]+:)?([a-zA-Z0-9_.]+)\+0x([0-9a-f]+)/0x([0-9a-f]+)`)
+	linuxStackFrameRe = regexp.MustCompile(`^ *(?:\[\<?(?:[0-9a-f]+)\>?\] ?){0,2}[ \t]+(?:[0-9]+:)?([a-zA-Z0-9_.]+)\+0x([0-9a-f]+)/0x([0-9a-f]+)`)
+	linuxRipFrame     = compile(`N?IP:? (?:(?:[0-9]+:)?(?:{{PC}} +){0,2}{{FUNC}}|[0-9]+:0x[0-9a-f]+|(?:[0-9]+:)?{{PC}} +\[< *\(null\)>\] +\(null\)|[0-9]+: +\(null\))`)
 )
 
 var linuxCorruptedTitles = []*regexp.Regexp{
@@ -897,6 +910,7 @@ func warningStackFmt(skip ...string) *stackFmt {
 	}
 }
 
+// nolint: lll
 var linuxOopses = append([]*oops{
 	{
 		[]byte("BUG:"),
@@ -1128,6 +1142,7 @@ var linuxOopses = append([]*oops{
 			compile("ODEBUG:"),
 			// Android prints this sometimes during boot.
 			compile("Boot_DEBUG:"),
+			compile("xlog_status:"),
 			// Android ART debug output.
 			compile("DEBUG:"),
 			// pkg/host output in debug mode.

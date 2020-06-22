@@ -55,7 +55,14 @@ some parts of descriptions from header files.
 
 To enable fuzzing of a new kernel interface:
 
-1. Study the interface, find out which syscalls are required to use it.
+1. Study the interface, find out which syscalls are required to use it. Sometimes there is nothing besides the source code, but here are some things that may help:
+
+   - Searching the Internet for the interface name and/or some unique constants.
+   - Grepping Documentation/ dir in the kernel.
+   - Searching tools/testing/ dir in the kernel.
+   - Looking for large comment blocks in the source code.
+   - Finding commit that added the interface via `git blame` or `git log` and reading the commit description.
+   - Reading source code of or tracing libraries or applications that are known to use this interface.
 
 2. Using [syntax documentation](syscall_descriptions_syntax.md) and
    [existing descriptions](/sys/linux/) as an example, add a declarative
@@ -65,8 +72,7 @@ To enable fuzzing of a new kernel interface:
       subsystems, for example [bpf.txt](/sys/linux/bpf.txt) or [socket.txt](/sys/linux/socket.txt).
     - [sys/linux/sys.txt](/sys/linux/sys.txt) holds descriptions for more general system calls.
     - An entirely new subsystem can be added as a new `sys/linux/<new>.txt` file.
-    - Use `dev_*.txt` filename format for descriptions of `/dev/` devices.
-    - Similarly, use `socket_*.txt` for sockets.
+    - If subsystem descriptions are split across multiple files, prefix the name of each file with the name of the subsystem (e.g. use `dev_*.txt` for descriptions of `/dev/` devices, use `socket_*.txt` for sockets, etc).
 
 3. After adding/changing descriptions run:
 
@@ -106,7 +112,15 @@ more efficient.
 
 If you want to fuzz only the new subsystem that you described locally, you may
 find the `enable_syscalls` configuration parameter useful to specifically target
-the new system calls.
+the new system calls. All system calls in the `enable_syscalls` list
+will be enabled if their requirements are met (ie. if they are supported
+in the target machine and any other system calls that need to run in
+order to provide inputs for them are also enabled). You can also include
+wildcard definitions to enable multiple system calls in a single line,
+for example: `"ioctl"` will enable all the described ioctls syscalls
+that have their requirements met, ``"ioctl$UDMABUF_CREATE"`` enables
+only that particular ioctl call, ``"write$UHID_*"`` enables all write
+system calls that start with that description identifier.
 
 When updating existing syzkaller descriptions, note, that unless there's a drastic
 change in descriptions for a particular syscall, the programs that are already in

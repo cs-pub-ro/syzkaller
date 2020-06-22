@@ -175,7 +175,7 @@ func (r *randGen) randPageCount() (n uint64) {
 	case r.nOutOf(5, 6):
 		n = r.rand(20) + 1
 	default:
-		n = (r.rand(3) + 1) * 512
+		n = (r.rand(3) + 1) * r.target.NumPages / 4
 	}
 	return
 }
@@ -323,15 +323,9 @@ func (r *randGen) randString(s *state, t *BufferType) []byte {
 		'/', ':', '.', ',', '-', '\'', '[', ']', '{', '}'}
 	buf := new(bytes.Buffer)
 	for r.nOutOf(3, 4) {
-		switch {
-		case r.nOutOf(10, 21):
-			dict := r.target.StringDictionary
-			if len(dict) != 0 {
-				buf.WriteString(dict[r.Intn(len(dict))])
-			}
-		case r.nOutOf(10, 11):
+		if r.nOutOf(10, 11) {
 			buf.Write([]byte{punct[r.Intn(len(punct))]})
-		default:
+		} else {
 			buf.Write([]byte{byte(r.Intn(256))})
 		}
 	}
@@ -435,8 +429,7 @@ func (r *randGen) createResource(s *state, res *ResourceType, dir Dir) (arg Arg,
 func (r *randGen) generateText(kind TextKind) []byte {
 	switch kind {
 	case TextTarget:
-		if r.target.Arch == "amd64" || r.target.Arch == "386" {
-			cfg := createTargetIfuzzConfig(r.target)
+		if cfg := createTargetIfuzzConfig(r.target); cfg != nil {
 			return ifuzz.Generate(cfg, r.Rand)
 		}
 		fallthrough
@@ -456,8 +449,7 @@ func (r *randGen) generateText(kind TextKind) []byte {
 func (r *randGen) mutateText(kind TextKind, text []byte) []byte {
 	switch kind {
 	case TextTarget:
-		if r.target.Arch == "amd64" || r.target.Arch == "386" {
-			cfg := createTargetIfuzzConfig(r.target)
+		if cfg := createTargetIfuzzConfig(r.target); cfg != nil {
 			return ifuzz.Mutate(cfg, r.Rand, text)
 		}
 		fallthrough
@@ -489,7 +481,7 @@ func createTargetIfuzzConfig(target *Target) *ifuzz.Config {
 	case "386":
 		cfg.Mode = ifuzz.ModeProt32
 	default:
-		panic("unknown text kind")
+		return nil
 	}
 	return cfg
 }
